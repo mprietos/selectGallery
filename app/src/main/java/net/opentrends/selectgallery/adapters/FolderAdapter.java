@@ -36,11 +36,13 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
     private LayoutInflater mInflater;
     private static List<Photos> data;
     private ClickContract.ClickFolder mListener;
+    private boolean isFolder;
 
-    public FolderAdapter(Context mContext, ClickContract.ClickFolder mListener) {
+    public FolderAdapter(Context mContext, ClickContract.ClickFolder mListener, boolean isFolder) {
         this.mContext = mContext;
         this.mListener = mListener;
         mInflater = LayoutInflater.from(mContext);
+        this.isFolder = isFolder;
     }
 
     public static List<Photos> getData() {
@@ -57,7 +59,7 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
     public void onBindViewHolder(final ViewHolder holder, final int position) {
         final Photos photo = data.get(position);
 
-        if (Folder.isFolder){
+        if (isFolder){
             holder.mTextGrid.setText(photo.getName() == null ? "-1" : photo.getName());
         }else{
             holder.mTextGrid.setVisibility(View.GONE);

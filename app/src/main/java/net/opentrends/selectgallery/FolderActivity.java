@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.provider.MediaStore;
 import android.provider.SyncStateContract;
 import android.support.annotation.NonNull;
@@ -18,6 +19,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.MenuItem;
 import android.widget.ProgressBar;
 import android.support.v7.widget.Toolbar;
@@ -39,6 +41,9 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
     private ProgressBar mProgressBar;
     private RecyclerView mRecyclerView;
     private FolderAdapter mAdapter;
+
+
+    private List<String> bucketIds = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,6 +116,67 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
     private void setGridAdapter() {
         // Create a new grid adapter
 
+
+        String[] projection = new String[] {MediaStore.Images.Media._ID,
+                MediaStore.Images.Media.DATA,
+                MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+                MediaStore.Images.Media.BUCKET_ID,
+                MediaStore.Images.Media.DISPLAY_NAME};
+
+        String sortOrder = MediaStore.Images.Media.DATE_ADDED + " DESC";
+
+        Uri images = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+
+        // Make the query.
+        Cursor cur = getContentResolver().query(images,
+                projection, // Which columns to return
+                null,       // Which rows to return (all rows)
+                null,       // Selection arguments (none)
+                sortOrder   // Ordering
+        );
+
+        List<Photos> items = new ArrayList<Photos>();
+        if ( cur != null && cur.getCount() > 0 ) {
+
+            if (cur.moveToFirst()) {
+                String bucketId;
+                String bucketName;
+                String data;
+                String imageId;
+                int bucketNameColumn = cur.getColumnIndex(
+                        MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
+
+                int imageUriColumn = cur.getColumnIndex(
+                        MediaStore.Images.Media.DATA);
+
+                int imageIdColumn = cur.getColumnIndex(
+                        MediaStore.Images.Media._ID );
+
+                int imageNameColumn = cur.getColumnIndex(
+                        MediaStore.Images.Media.DISPLAY_NAME );
+
+                int bucketID = cur.getColumnIndex(
+                        MediaStore.Images.Media.BUCKET_ID );
+
+
+                do {
+                    bucketName = cur.getString( bucketNameColumn );
+                    bucketId= cur.getString( bucketID );
+                    if (!bucketIds.contains(bucketId)) {
+                        bucketIds.add(bucketId);
+                        Log.e("hola", "uyyyy");
+                        items.add(new Photos(cur.getString(imageUriColumn), bucketName));
+                    }
+
+                }while (cur.moveToNext());
+            }
+        }
+
+        cur.close();
+        mAdapter.setData(items);
+
+        /*
+
         String directoryPath = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.getPath();
         List<Photos> items = new ArrayList<Photos>();
         File[] files = new File(directoryPath).listFiles(new ImageFileFilter());
@@ -123,6 +189,7 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
             }
         }
         mAdapter.setData(items);
+        */
 
     }
 
@@ -159,7 +226,7 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
 
 
         if (mAdapter == null){
-            mAdapter = new FolderAdapter(getApplicationContext(), this);
+            mAdapter = new FolderAdapter(getApplicationContext(), this, true);
         }
 
         mRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));

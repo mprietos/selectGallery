@@ -54,7 +54,7 @@ public class ImagesActivity extends AppCompatActivity implements ClickContract.C
         mProgressBar = (ProgressBar)findViewById(R.id.pb_main);
 
         if (mAdapter == null){
-            mAdapter = new FolderAdapter(getApplicationContext(), this);
+            mAdapter = new FolderAdapter(getApplicationContext(), this, false);
         }
 
         mRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));
