@@ -4,37 +4,29 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.provider.MediaStore;
-import android.provider.SyncStateContract;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.CursorLoader;
-import android.support.v4.content.Loader;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.MenuItem;
 import android.widget.ProgressBar;
 import android.support.v7.widget.Toolbar;
 
 import net.opentrends.selectgallery.adapters.FolderAdapter;
-import net.opentrends.selectgallery.model.Folder;
+import net.opentrends.selectgallery.model.PhonePhoto;
+import net.opentrends.selectgallery.model.PhotoFolder;
 import net.opentrends.selectgallery.model.Photos;
 
-import java.io.File;
-import java.io.FileFilter;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
-public class FolderActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, ClickContract.ClickFolder {
+public class FolderActivity extends AppCompatActivity implements ClickContract.ClickFolder {
 
 
     private static final int MY_PERMISSIONS_READ_EXTERNAL_STORAGE = 100;
@@ -44,6 +36,7 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
 
 
     private List<String> bucketIds = new ArrayList<>();
+    private List<PhotoFolder> folders = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +49,6 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
 
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setDisplayShowHomeEnabled(true);
-            toolbar.setNavigationIcon(android.R.drawable.ic_menu_close_clear_cancel);
         }
 
         if (ContextCompat.checkSelfPermission(this,
@@ -136,12 +128,13 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
         );
 
         List<Photos> items = new ArrayList<Photos>();
+
         if ( cur != null && cur.getCount() > 0 ) {
 
             if (cur.moveToFirst()) {
                 String bucketId;
                 String bucketName;
-                String data;
+                String imageUri;
                 String imageId;
                 int bucketNameColumn = cur.getColumnIndex(
                         MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
@@ -162,10 +155,33 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
                 do {
                     bucketName = cur.getString( bucketNameColumn );
                     bucketId= cur.getString( bucketID );
-                    if (!bucketIds.contains(bucketId)) {
+                    imageId = cur.getString( imageIdColumn );
+                    imageUri = cur.getString( imageUriColumn );
+
+                    PhonePhoto phonePhoto = new PhonePhoto();
+                    phonePhoto.setFolderName( bucketName );
+                    phonePhoto.setPhotoPath( imageUri );
+                    phonePhoto.setId( Integer.valueOf( imageId ) );
+                    phonePhoto.setPressed(false);
+
+                    if (bucketIds.contains(bucketId)) {
+                        for ( PhotoFolder folder : folders ) {
+                            if ( folder.getName().equals( bucketName ) ) {
+                                folder.getPhotoList().add( phonePhoto );
+                                break;
+                            }
+                        }
+                    }else{
+
+                        PhotoFolder folder = new PhotoFolder();
+                        folder.setId( phonePhoto.getId() );
+                        folder.setName( bucketName );
+                        folder.setCoverPath( phonePhoto.getPhotoPath() );
+                        folder.getPhotoList().add( phonePhoto );
+
+                        folders.add( folder );
                         bucketIds.add(bucketId);
-                        Log.e("hola", "uyyyy");
-                        items.add(new Photos(cur.getString(imageUriColumn), bucketName));
+
                     }
 
                 }while (cur.moveToNext());
@@ -173,52 +189,13 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
         }
 
         cur.close();
-        mAdapter.setData(items);
-
-        /*
-
-        String directoryPath = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.getPath();
-        List<Photos> items = new ArrayList<Photos>();
-        File[] files = new File(directoryPath).listFiles(new ImageFileFilter());
-        for (File file : files) {
-
-            // Add the directories containing images or sub-directories
-            if (file.isDirectory()
-                    && file.listFiles(new ImageFileFilter()).length > 0) {
-                items.add(new Photos(file.getAbsolutePath(), file.getName()));
-            }
-        }
-        mAdapter.setData(items);
-        */
-
     }
 
-
-    //sorts based on the files name
-    public class SortFileName implements Comparator<File> {
-        @Override
-        public int compare(File f1, File f2) {
-            return f1.getName().compareTo(f2.getName());
-        }
-    }
-
-    //sorts based on a file or folder. folders will be listed first
-    public class SortFolder implements Comparator<File> {
-        @Override
-        public int compare(File f1, File f2) {
-            if (f1.isDirectory() == f2.isDirectory())
-                return 0;
-            else if (f1.isDirectory() && !f2.isDirectory())
-                return -1;
-            else
-                return 1;
-        }
-    }
 
     private void initViews() {
 
 
-
+        setGridAdapter();
 
 
         mRecyclerView = (RecyclerView)findViewById(R.id.rv_main_grid);
@@ -226,13 +203,13 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
 
 
         if (mAdapter == null){
-            mAdapter = new FolderAdapter(getApplicationContext(), this, true);
+            mAdapter = new FolderAdapter(getApplicationContext(), this, true, folders);
         }
 
         mRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));
         mRecyclerView.setAdapter(mAdapter);
 
-        setGridAdapter();
+
     }
 
     @Override
@@ -241,28 +218,10 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
     }
 
     @Override
-    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        return new CursorLoader(this,
-                FolderAdapter.uri,
-                FolderAdapter.projections,
-                null,
-                null,
-                FolderAdapter.sortOrder);
-    }
-
-    @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-
-    }
-
-    @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
-
-    }
-
-    @Override
     public void clickFolder(int pos) {
         Intent i = new Intent(getBaseContext(), ImagesActivity.class);
+
+        i.putExtra(EXTRA_LIST, folders.get(pos));
         i.putExtra(EXTRA_POS, pos);
         startActivity(i);
     }
@@ -272,33 +231,12 @@ public class FolderActivity extends AppCompatActivity implements LoaderManager.L
 
     }
 
+    @Override
+    public void countSelectImages() {
 
-    private boolean isImageFile(String filePath) {
-        if (filePath.endsWith(".jpg") || filePath.endsWith(".png"))
-        // Add other formats as desired
-        {
-            return true;
-        }
-        return false;
-    }
-    /**
-     * This can be used to filter files.
-     */
-    private class ImageFileFilter implements FileFilter {
-
-        @Override
-        public boolean accept(File file) {
-            if (file.isDirectory()) {
-                return true;
-            }
-            else if (isImageFile(file.getAbsolutePath())) {
-                return true;
-            }
-            return false;
-        }
     }
 
     private final static String EXTRA_POS = "posF";
-
+    private final static String EXTRA_LIST = "listF";
 
 }

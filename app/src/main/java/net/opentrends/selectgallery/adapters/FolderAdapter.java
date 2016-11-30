@@ -15,8 +15,7 @@ import com.bumptech.glide.Glide;
 
 import net.opentrends.selectgallery.ClickContract;
 import net.opentrends.selectgallery.R;
-import net.opentrends.selectgallery.model.Folder;
-import net.opentrends.selectgallery.model.Photos;
+import net.opentrends.selectgallery.model.PhotoFolder;
 
 import java.io.File;
 import java.util.List;
@@ -34,19 +33,16 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
 
     private Context mContext;
     private LayoutInflater mInflater;
-    private static List<Photos> data;
+    private  List<PhotoFolder> data;
     private ClickContract.ClickFolder mListener;
     private boolean isFolder;
 
-    public FolderAdapter(Context mContext, ClickContract.ClickFolder mListener, boolean isFolder) {
+    public FolderAdapter(Context mContext, ClickContract.ClickFolder mListener, boolean isFolder, List<PhotoFolder> folders) {
         this.mContext = mContext;
         this.mListener = mListener;
         mInflater = LayoutInflater.from(mContext);
+        this.data = folders;
         this.isFolder = isFolder;
-    }
-
-    public static List<Photos> getData() {
-        return data;
     }
 
     @Override
@@ -57,7 +53,7 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, final int position) {
-        final Photos photo = data.get(position);
+        final PhotoFolder photo = data.get(position);
 
         if (isFolder){
             holder.mTextGrid.setText(photo.getName() == null ? "-1" : photo.getName());
@@ -65,21 +61,18 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
             holder.mTextGrid.setVisibility(View.GONE);
         }
 
-        File b = new File(Environment.getExternalStorageDirectory(), photo.getPath());
+        File b = new File(Environment.getExternalStorageDirectory(), photo.getCoverPath());
 
         Glide.with(mContext)
-                .load(photo.getPath()) // Uri of the picture
+                .load(photo.getCoverPath()) // Uri of the picture
                 .into(holder.mImageGrid);
 
 
         holder.mView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (Folder.isFolder){
                     mListener.clickFolder(position);
-                }else{
 
-                }
             }
         });
 
@@ -91,10 +84,6 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
             return  0;
 
         return data.size();
-    }
-
-    public void setData(List<Photos> data) {
-        this.data = data;
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

@@ -21,6 +21,18 @@
         <activity
             android:name=".ImagesActivity"
             android:label="@string/title_activity_images"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <!--
+ ATTENTION: This was auto-generated to add Google Play services to your project for
+     App Indexing.  See https://g.co/AppIndexing/AndroidStudio for more information.
+        -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+
+        <activity
+            android:name=".ImageViewActivity"
+            android:label="@string/title_activity_image_view"
             android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 

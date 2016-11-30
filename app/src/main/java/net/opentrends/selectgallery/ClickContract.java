@@ -9,6 +9,7 @@ public interface ClickContract {
     public interface ClickFolder{
         void clickFolder(int pos);
         void clickImage(int pos);
+        void countSelectImages();
 
     }
 }
